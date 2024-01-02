@@ -306,10 +306,16 @@ void SetFastLedStripes(int NumOfLeds) {
   FastLED.addLeds<NEOPIXEL, stripPin_4>(leds, 3 * NumOfLeds, NumOfLeds);
   FastLED.addLeds<NEOPIXEL, stripPin_5>(leds, 4 * NumOfLeds, NumOfLeds);
   FastLED.addLeds<NEOPIXEL, stripPin_6>(leds, 5 * NumOfLeds, NumOfLeds);
+}
 
 //Update the Max leds per pin based on config commands received.
 //This increases refresh rate as it will ignore any led data
 //past this length, nor attempt to update.
 void UpdateFastLedStripes(int NumOfLeds) {
-  FastLED.setLeds(leds, NumOfLeds);
+  FastLED[0].setLeds(leds, NumOfLeds);
+  FastLED[1].setLeds(leds, NumOfLeds);
+  FastLED[2].setLeds(leds, NumOfLeds);
+  FastLED[3].setLeds(leds, NumOfLeds);
+  FastLED[4].setLeds(leds, NumOfLeds);
+  FastLED[5].setLeds(leds, NumOfLeds);
 }
