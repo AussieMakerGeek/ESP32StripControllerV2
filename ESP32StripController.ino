@@ -22,6 +22,9 @@
     THE SOFTWARE. 
 */
 
+//ESP32 Optimised Fastled...
+#define FASTLED_ESP32_I2S
+
 #include <elapsedMillis.h>
 #include <FastLED.h>
 #define SERIAL_BUFFER_SIZE 4096
@@ -31,14 +34,26 @@
 #define FirmwareVersionMajor 1
 #define FirmwareVersionMinor 3
 
-//Defines the max number of leds which is allowed per ledstrip.
-#define MaxLedsPerStrip 448
+//Define the max number of leds which is allowed per ledstrip.
+//This should be the hardware maximum - About 1000 leds should be possible
+//but means memory will be allocated for all 6000 leds.
+//Changing the led count via the interface later has no impact on memory use
+//It's all pre-allocated here.
+ 
+#define MaxLedsPerStrip 500  
 #define configuredStrips 6
-word configuredStripLength = 448;
+
+//Which pins the strips are on
+#define stripPin_1 14
+#define stripPin_2 15
+#define stripPin_3 26
+#define stripPin_4 27
+#define stripPin_5 19
+#define stripPin_6 16
+
+word configuredStripLength = 500;
 
 CRGB leds[configuredStrips*MaxLedsPerStrip];
-
-
 
 //Defines the Pinnumber to which the built in led is connected.
 #define LedPin 2
@@ -63,11 +78,8 @@ void setup() {
 
 //Main loop of the programm gets called again and again.
 void loop() {
-  // put your main code here, to run repeatedly:
-
   //Check if data is available
   if (Serial.available()) {
-
     byte receivedByte = Serial.read();
     switch (receivedByte) {
       case 'L':
@@ -102,11 +114,9 @@ void loop() {
         fill_solid( leds, MaxLedsPerStrip*configuredStrips, CRGB(255,0,0));
         FastLED.show();
         FastLED.delay(1000);
-  //      FastLED.showColor(CRGB(0, 255, 0));
         fill_solid( leds, MaxLedsPerStrip*configuredStrips, CRGB(0,255,0));
         FastLED.show();
         FastLED.delay(1000);
- //       FastLED.showColor(CRGB(0, 0, 255));
         fill_solid( leds, MaxLedsPerStrip*configuredStrips, CRGB(0,0,255));
         FastLED.show();
         FastLED.delay(1000);
@@ -126,7 +136,6 @@ void loop() {
   }
   Blink();
 }
-
 
 //Sets the mode for the blinking of the led
 void SetBlinkMode(int Mode) {
@@ -185,22 +194,17 @@ void Blink() {
 
 }
 
-
 //Outputs the data in the ram to the ledstrips
 void OutputData() {
   FastLED.show();
   Ack();
 }
 
-
 //Fills the given area of a ledstrip with a color
 void Fill() {
   word firstLed = ReceiveWord();
-
   word numberOfLeds = ReceiveWord();
-
   int ColorData = ReceiveColorData();
-
   if ( firstLed <= configuredStripLength * configuredStrips && numberOfLeds > 0 && firstLed + numberOfLeds - 1 <= configuredStripLength * configuredStrips ) {
     word endLedNr = firstLed + numberOfLeds;
     for (word ledNr = firstLed; ledNr < endLedNr; ledNr++) {
@@ -215,24 +219,18 @@ void Fill() {
 
 }
 
-
 //Receives data for the ledstrips
 void ReceiveData() {
   word firstLed = ReceiveWord();
-
   word numberOfLeds = ReceiveWord();
-
   if ( firstLed <= configuredStripLength * configuredStrips && numberOfLeds > 0 && firstLed + numberOfLeds - 1 <= configuredStripLength * configuredStrips ) {
     //FirstLedNr and numberOfLeds are valid.
     //Receive and set color data
-
     word endLedNr = firstLed + numberOfLeds;
     for (word ledNr = firstLed; ledNr < endLedNr; ledNr++) {
       leds[ledNr] = CRGB(ReceiveColorData());
     }
-
     Ack();
-
   } else {
     //Number of the first led or the number of leds to receive is outside the allowed range
     Nack();
@@ -248,8 +246,7 @@ void SetLedStripLength() {
   } else {
     //stripLength is in the valid range
     configuredStripLength = stripLength;
-// Removed until i figure out to change the length dynamicly    
-//    SetFastLedStripes(stripLength);
+    UpdateFastLedStripes(stripLength);
     Ack();
   }
 }
@@ -257,10 +254,8 @@ void SetLedStripLength() {
 //Clears the data for all configured leds
 void  ClearAllLedData() {
   FastLED.clear();
-//  fill_solid( leds, MaxLedsPerStrip*configuredStrips, CRGB(0,0,0));
   Ack();
 }
-
 
 //Sends the firmware version
 void SendVersion() {
@@ -277,7 +272,6 @@ void SendMaxNumberOfLeds() {
   Serial.write(B);
   Ack();
 }
-
 
 //Sends a ack (A)
 void Ack() {
@@ -299,8 +293,6 @@ int ReceiveColorData() {
   colorValue = (colorValue << 8) | Serial.read();
 
   return colorValue;
-
-
 }
 
 //Receives a word value. High byte first, low byte second
@@ -313,11 +305,18 @@ word ReceiveWord() {
   return wordValue;
 }
 
+//When initialising the led strips, assume the maximum allowed
 void SetFastLedStripes(int NumOfLeds) {
-  FastLED.addLeds<NEOPIXEL, 14>(leds, 0, NumOfLeds);
-  FastLED.addLeds<NEOPIXEL, 15>(leds, NumOfLeds, NumOfLeds);
-  FastLED.addLeds<NEOPIXEL, 26>(leds, 2 * NumOfLeds, NumOfLeds);
-  FastLED.addLeds<NEOPIXEL, 27>(leds, 3 * NumOfLeds, NumOfLeds);
-  FastLED.addLeds<NEOPIXEL, 19>(leds, 4 * NumOfLeds, NumOfLeds);
-  FastLED.addLeds<NEOPIXEL, 16>(leds, 5 * NumOfLeds, NumOfLeds);
+  FastLED.addLeds<NEOPIXEL, stripPin_1>(leds, 0, NumOfLeds);
+  FastLED.addLeds<NEOPIXEL, stripPin_2>(leds, NumOfLeds, NumOfLeds);
+  FastLED.addLeds<NEOPIXEL, stripPin_3>(leds, 2 * NumOfLeds, NumOfLeds);
+  FastLED.addLeds<NEOPIXEL, stripPin_4>(leds, 3 * NumOfLeds, NumOfLeds);
+  FastLED.addLeds<NEOPIXEL, stripPin_5>(leds, 4 * NumOfLeds, NumOfLeds);
+  FastLED.addLeds<NEOPIXEL, stripPin_6>(leds, 5 * NumOfLeds, NumOfLeds);
+
+//Update the Max leds per pin based on config commands received.
+//This increases refresh rate as it will ignore any led data
+//past this length, nor attempt to update.
+void UpdateFastLedStripes(int NumOfLeds) {
+  FastLED.setLeds(leds, NumOfLeds);
 }
