@@ -128,11 +128,7 @@ void loop() {
         Nack();
         break;
     }
-
-
     SetBlinkMode(1);
-
-
   }
   Blink();
 }
@@ -191,7 +187,6 @@ void Blink() {
       }
       break;
   }
-
 }
 
 //Outputs the data in the ram to the ledstrips
@@ -215,8 +210,6 @@ void Fill() {
     //Number of the first led or the number of leds to receive is outside the allowed range
     Nack();
   }
-
-
 }
 
 //Receives data for the ledstrips
